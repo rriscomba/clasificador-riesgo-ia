@@ -4,7 +4,7 @@ compatibility_date = "2026-09-01"
 
 [[kv_namespaces]]
 binding = "CONTADOR"
-id = "REEMPLAZAR_CON_EL_ID_DEL_NAMESPACE"
+id = "0ed47fc556254a01ab490214891deae3"
 
 [vars]
-ORIGEN_PERMITIDO = "https://USUARIO.github.io"
+ORIGEN_PERMITIDO = "https://rriscomba.github.io"
