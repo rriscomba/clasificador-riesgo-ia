@@ -140,6 +140,7 @@ aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); displ
 .e-prohibido, .e-noviable { border-left-color: var(--prohibido); } .e-prohibido .nivel, .e-noviable .nivel { color: var(--alto); }
 .e-experimental { border-left-color: var(--exp); } .e-experimental .nivel { color: var(--exp); }
 .flujo { font-size: .86rem; color: var(--tinta-2); }
+.reg { margin: 4px 0 0; font-size: 1.05rem; line-height: 1.35; }
 .flujo b { color: var(--tinta); }
 .medidores { display: flex; flex-direction: column; gap: 8px; }
 .medidor { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) 3.4em; gap: 8px; align-items: center; font-size: .82rem; }

@@ -7,14 +7,14 @@
   const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   const PASOS = [
-    { id: 'caso', n: '', t: 'Caso' }, { id: 'p0', n: '0', t: '¿Es un sistema de IA?' }, { id: 'p1', n: '1', t: 'Descarte de usos prohibidos' },
+    { id: 'caso', n: '', t: 'Caso' }, { id: 'p0', n: '0', t: 'Ámbito y sistema de IA' }, { id: 'p1', n: '1', t: 'Descarte de usos prohibidos' },
     { id: 'p2', n: '2', t: 'Descarte de usos sensibles' }, { id: 'p3', n: '3', t: 'Información y herramienta' }, { id: 'p4', n: '4', t: 'Tres dimensiones' },
     { id: 'p5', n: '5', t: 'Agencia' }, { id: 'p6', n: '6', t: 'Situaciones especiales' }, { id: 'p7', n: '7', t: 'Ficha del agente (opcional)' }, { id: 'rep', n: '', t: 'Reporte' }
   ];
 
   function estadoVacio() {
     return { perfil: 'nucleo', escala: 'sectorial', caso: { nombre: '', entidad: '', area: '', responsable: '', fecha: hoy(), descripcion: '', herramienta: '' },
-      p0: {}, A: {}, B: {}, info: { inh: null, res: null, evidencia: '', etiqueta: '' }, herr: { inh: null, res: null, evidencia: '' }, authC: null, authR: null,
+      ambito: { sujeto: null, excepcion: null }, grupos: {}, p0: {}, A: {}, B: {}, info: { inh: null, res: null, evidencia: '', etiqueta: '' }, herr: { inh: null, res: null, evidencia: '' }, authC: null, authR: null,
       f: {}, s1: { solicita: false, c: [false, false, false, false, false] }, s2: false, s4: false, s5: false, p03: null, acap: { senales: {} } };
   }
   function estadoEjemplo() {
@@ -23,6 +23,7 @@
     E.caso = { nombre: 'Agente de atención de correos ciudadanos', entidad: 'Entidad de ejemplo', area: 'Oficina de Atención al Ciudadano', responsable: 'Jefatura de Atención al Ciudadano', fecha: hoy(),
       descripcion: 'Agente que lee los correos de ciudadanos y proveedores, registra cada caso en el sistema de atención y responde de forma automática.', herramienta: 'Asistente de IA contratado por la entidad, con conectores al correo y al sistema de atención' };
     E.p03 = 'no';
+    E.ambito = { sujeto: 'publica', excepcion: 'ninguna' };
     E.p0 = { 'P0.1': 'si', 'P0.2': 'si' };
     M.listaA.forEach((q) => (E.A[q.id] = 'no'));
     M.perfiles.nucleo.listaB.forEach((id) => (E.B[id] = { aplica: 'no', s3: false }));
@@ -108,11 +109,17 @@
       const c = E.caso; const campo = (k, t, cls = '') => `<label class="${cls}" for="c-${k}">${t}<input type="text" id="c-${k}" data-ayuda="caso:${k}" data-k="caso|${k}" value="${esc(c[k])}"></label>`;
       return titulo('Inicio', 'Datos del caso de uso', 'Estos datos solo aparecen en el reporte que exportes. No se guardan en ningún servidor.') +
         `<div class="campos">${campo('nombre', 'Nombre del caso de uso', 'ancho')}${campo('entidad', 'Entidad')}${campo('area', 'Área dueña')}${campo('responsable', 'Responsable')}${campo('fecha', 'Fecha de evaluación')}
-        <label class="ancho" for="c-descripcion">Descripción breve<textarea id="c-descripcion" data-ayuda="caso:descripcion" data-k="caso|descripcion">${esc(c.descripcion)}</textarea></label>${campo('herramienta', 'Herramienta o proveedor', 'ancho')}</div>`;
+        <label class="ancho" for="c-descripcion">Descripción breve<textarea id="c-descripcion" data-ayuda="caso:descripcion" data-k="caso|descripcion">${esc(c.descripcion)}</textarea></label>${campo('herramienta', 'Herramienta o proveedor', 'ancho')}</div>
+        <div class="bloque"><h3>Grupos que el sistema afecta especialmente</h3><p class="nota">Artículo 12 del Reglamento. Se registra en el reporte; no cambia el nivel.</p><div class="checks" data-ayuda="grupos">${M.gruposVulnerables.map((g) => `<label><input type="checkbox" data-act="chk" data-k="grupos|${g.id}" ${E.grupos && E.grupos[g.id] ? 'checked' : ''}> ${esc(g.nombre)}</label>`).join('')}</div></div>`;
     },
     p0() {
-      return titulo('Paso 0', '¿Es un sistema de IA?', 'Basta un «Sí» para que el caso entre en el alcance. Las reglas fijas, macros y automatizaciones sin componentes de IA quedan fuera.') +
-        `<div class="preguntas">${M.paso0.map((q) => `<div class="pregunta" data-ayuda="${q.id}"><span class="cod">${q.id}</span><span>${esc(q.texto)}</span>${sino('p0|' + q.id, E.p0[q.id], true)}</div>`).join('')}</div>
+      const a = E.ambito || {};
+      const opcion = (grupo, x) => `<button type="button" class="opcion" data-ayuda="ambito:${x.id}" data-act="set" data-k="ambito|${grupo}" data-v="${x.id}" aria-pressed="${a[grupo] === x.id}"><b>${esc(x.nombre)}</b>${x.base ? `<span class="lv">${esc(x.base)}</span>` : ''}</button>`;
+      return titulo('Paso 0', 'Ámbito jurídico y sistema de IA', 'Primero se verifica si el Reglamento aplica al caso (artículos 3 y 4). Luego, basta un «Sí» para que el caso sea un sistema de IA; las reglas fijas, macros y automatizaciones sin componentes de IA quedan fuera.') +
+        `<div class="bloque"><h3>Tipo de organización (art. 3)</h3><div class="opciones">${M.ambito.sujetos.map((x) => opcion('sujeto', x)).join('')}</div></div>
+        <div class="bloque"><h3>¿Se aplica alguna excepción del art. 4?</h3><div class="opciones">${M.ambito.excepciones.map((x) => opcion('excepcion', x)).join('')}</div>${R.excepcion && R.excepcion.nota ? `<p class="nota">${esc(R.excepcion.nota)}</p>` : ''}</div>
+        <div class="bloque"><h3>¿Es un sistema de IA?</h3></div>
+        <div class="preguntas">${M.paso0.map((q) => `<div class="pregunta" data-ayuda="${q.id}"><span class="cod">${q.id}</span><span>${esc(q.texto)}</span>${sino('p0|' + q.id, E.p0[q.id], true)}</div>`).join('')}</div>
         <div class="bloque"><h3>Antes de seguir</h3><div class="pregunta" data-ayuda="P0.3"><span class="cod">P0.3</span><span>${esc(M.adicionalidad.texto)}<span class="base">Orientativa: no cambia la clasificación</span></span>${sino('p03', E.p03)}</div></div>`;
     },
     p1() {
@@ -124,8 +131,8 @@
       return titulo('Paso 2', 'Descarte de usos sensibles', 'Indique si el resultado del sistema se usa para alguna de estas decisiones, o influye significativamente en ellas (es un insumo principal, fija un valor por defecto que el decisor suele aceptar o filtra qué casos llegan a evaluarse). Si alguno aplica, el caso no se detiene: avanza con evaluación de impacto y acompañamiento del Oficial de IA. Responda según cómo se usará el sistema, no según el resultado que prefiera.') +
         `<div class="preguntas">${ids.map((id) => { const q = M.listaB[id]; const b = E.B[id] || {};
           return `<div class="pregunta" data-ayuda="${id}"><span class="cod">${id}</span><span>${esc(q.texto)}<span class="base">${esc(q.base)}</span></span>${aplica('B|' + id + '|aplica', b.aplica)}
-          ${b.aplica === 'si' ? `<div class="extra"><label data-ayuda="s3"><input type="checkbox" data-act="chk" data-k="B|${id}|s3" ${b.s3 ? 'checked' : ''}> Ya no aplica porque el caso se rediseñó y el Comité lo aprobó</label></div>` : ''}</div>`; }).join('')}</div>
-        <p class="nota">N1 a N9 corresponden al artículo 24.1 del D.S. N.° 115-2025-PCM; los códigos NX y SF son criterios adicionales. Ante dudas, el artículo 24.2 permite consultar a la SGTD. Está prohibido fragmentar un sistema para evitar un disparador.</p>`;
+          ${b.aplica === 'si' ? `<div class="extra"><label data-ayuda="s3"><input type="checkbox" data-act="chk" data-k="B|${id}|s3" ${b.s3 ? 'checked' : ''}> Ya no aplica porque el caso de uso se rediseñó (cambio real, aprobado por el Comité y verificable con documentos)</label></div>` : ''}</div>`; }).join('')}</div>
+        <p class="nota">N1 a N9 corresponden al artículo 24.1 del D.S. N.° 115-2025-PCM y determinan la clasificación regulatoria de riesgo alto; los códigos NX y SF son criterios adicionales que solo elevan el nivel interno. Las medidas de reducción no hacen que un uso del artículo 24.1 deje de aplicar: solo un rediseño del caso de uso, que debe verificarse documentalmente. Ante dudas, el artículo 24.2 permite consultar a la SGTD. Está prohibido fragmentar un sistema para evitar un disparador.</p>`;
     },
     p3() {
       const iI = idx(M.informacion, E.info.inh), tI = idx(M.herramientas, E.herr.inh);
@@ -163,9 +170,9 @@
       return titulo('Paso 5', 'Nivel de agencia', 'La agencia se evalúa junto con los permisos del sistema (F3.3). Un agente autónomo con permisos de escritura o acción tiene piso de riesgo alto; uno delegado o autónomo con acceso de lectura o superior, piso moderado.') +
         tarjetaFactor(f) +
         `<div class="matriz-cont"><table><thead><tr><th>Nivel resultante</th><th>Agencia máxima</th><th>Condición</th></tr></thead><tbody>
-        <tr><td>Alto / Alto (crítico)</td><td>2 · Asistiva</td><td>Toda acción con efecto la ejecuta y registra una persona autorizada</td></tr>
-        <tr><td>Aceptable-moderado</td><td>3 · Delegada</td><td>Aprobación humana previa para acciones con efecto externo</td></tr>
-        <tr><td>Aceptable-bajo</td><td>4 · Autónoma dentro de límites</td><td>Solo con información pública o interna y sin efecto sobre terceros</td></tr></tbody></table></div>
+        <tr><td>Alto / Crítico</td><td>2 · Asistiva</td><td>Toda acción con efecto la ejecuta y registra una persona autorizada</td></tr>
+        <tr><td>Moderado</td><td>3 · Delegada</td><td>Aprobación humana previa para acciones con efecto externo</td></tr>
+        <tr><td>Bajo</td><td>4 · Autónoma dentro de límites</td><td>Solo con información pública o interna y sin efecto sobre terceros</td></tr></tbody></table></div>
         <p class="nota">El piso por agencia y la compatibilidad de la autonomía se muestran en el resultado final.</p>`;
     },
     p6() {
@@ -229,10 +236,15 @@
     return {
       metodologia: { version: M.version, perfil: perfil.nombre, escala: M.escalas[E.escala].nombre },
       caso: E.caso,
+      ambito: { sujeto: (M.ambito.sujetos.find((x) => x.id === R.sujeto) || {}).nombre || '', excepcion: R.excepcion ? `${R.excepcion.nombre} (${R.excepcion.base})` : (E.ambito && E.ambito.excepcion === 'ninguna' ? 'Ninguna' : ''),
+        gruposVulnerables: M.gruposVulnerables.filter((g) => E.grupos && E.grupos[g.id]).map((g) => g.nombre) },
+      clasificacionRegulatoria: R.regulatoria,
+      nivelInterno: { descripcion: 'Metodología propia de la herramienta; no es una categoría del Reglamento', inherente: R.nivelInh ? `${R.nivelInh} · ${M.niveles[R.nivelInh].nombre}` : '', residual: R.nivelRes ? `${R.nivelRes} · ${M.niveles[R.nivelRes].nombre}` : '' },
+      obligaciones: R.obligaciones,
       resultado: { estado: R.titulo, condicionado: R.condicionado ? 'Condicionado a reducir la autonomía del sistema' : '', nivelInherente: R.nivelInh ? M.niveles[R.nivelInh].nombre : '', nivelResidual: R.nivelRes ? M.niveles[R.nivelRes].nombre : '',
-        aprueba: R.aprueba || '', aprobacionReduccion: R.reduccion || '', tratamiento: R.tratamiento || null, compuerta: R.compuertaRes || '', motivoNoViable: R.motivoNoViable || '', agencia: R.agencia || '',
+        aprueba: R.aprueba || '', aprobacionReduccion: R.reduccion || '', evaluacionImpactoNormativa: R.eiiNormativa || '', tratamiento: R.tratamiento || null, compuerta: R.compuertaRes || '', motivoNoViable: R.motivoNoViable || '', agencia: R.agencia || '',
         dimensiones: R.dim, pisoListaB: { inh: R.pisoBInh, res: R.pisoBRes }, pisoAgencia: { inh: R.pisoAgInh, res: R.pisoAgRes }, observaciones: R.observaciones, notas: R.notas.concat(notasApp()), faltantes: R.faltantes },
-      respuestas: { paso0: E.p0, usosIndebidos: R.prohibidos, disparadores: R.disparadores, desactivadosS3: R.desactivados,
+      respuestas: { paso0: E.p0, usosIndebidos: R.prohibidos, disparadores: R.disparadores, redisenoDeclaradoS3: R.redisenados,
         informacion: { inherente: nombreInfo(E.info.inh), etiquetaInstitucional: E.info.etiqueta || null, conMedidas: E.info.res ? nombreInfo(E.info.res) : null }, herramienta: { inherente: nombreHerr(E.herr.inh), conMedidas: E.herr.res ? nombreHerr(E.herr.res) : null },
         factores: filasFactores(), rutasEspeciales: { S1: R.sandbox, S2: E.s2, S4: E.s4, S5: E.s5 }, automatizacionTradicionalBastaria: E.p03 === 'si' ? true : E.p03 === 'no' ? false : null },
       fichaAgente: esAgente() && acapLlena() ? { ...E.acap, frontera: (M.agente.fronteras.find((x) => x.id === E.acap.frontera) || {}).nombre || '', pendientes: acapFaltantes() } : null,
@@ -242,14 +254,19 @@
   function reporteHTML() {
     const D = reporteDatos(), r = D.resultado, c = D.caso;
     const fila = (a, b) => (b ? `<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>` : '');
-    const trat = r.tratamiento ? `${r.tratamiento.eii} · validación: ${r.tratamiento.validacion} · monitoreo: ${r.tratamiento.monitoreo}` : '';
+    const trat = r.tratamiento ? `Evaluación de impacto según la metodología: ${r.tratamiento.eii.toLowerCase()} · validación: ${r.tratamiento.validacion} · monitoreo: ${r.tratamiento.monitoreo}` : '';
+    const cr = D.clasificacionRegulatoria, ni = D.nivelInterno;
+    const oblig = D.obligaciones.length ? `<section><h3>Obligaciones aplicables y evidencia</h3><p class="nota">Lista de verificación. La herramienta no verifica su cumplimiento: cada punto requiere evidencia (política, procedimiento, responsable, documento, fecha y versión).</p><table><thead><tr><th>Artículo</th><th>Estado</th><th>Qué acreditar</th></tr></thead><tbody>${D.obligaciones.map((o) => `<tr><td>${esc(o.art)} · ${esc(o.tema)}</td><td>${esc(o.estado)}</td><td><ul>${o.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></td></tr>`).join('')}</tbody></table></section>` : '';
     const dims = Object.entries(M.dimensiones).map(([d, x]) => `<tr><td>${d} · ${esc(x.nombre)}</td><td>${r.dimensiones[d].inh ?? '—'}</td><td>${r.dimensiones[d].res ?? '—'}</td></tr>`).join('');
     const facts = D.respuestas.factores.map((f) => `<tr><td class="mono">${f.id}</td><td>${esc(f.nombre)}</td><td>${f.inh ?? '—'}${f.inhT ? ` · ${esc(f.inhT)}` : ''}</td><td>${esc(f.medida)}</td><td>${f.res ?? '—'}${f.ruta ? ` · ${esc(f.resT)}` : ''}</td><td>${esc(f.ev)}</td></tr>`).join('');
-    const listaB = D.respuestas.disparadores.length ? `<ul>${D.respuestas.disparadores.map((id) => `<li><b>${id}</b> ${esc(M.listaB[id].texto)}${D.respuestas.desactivadosS3.includes(id) ? ' (ya no aplica por S3)' : ''}</li>`).join('')}</ul>` : '<p>Ninguno.</p>';
+    const listaB = D.respuestas.disparadores.length ? `<ul>${D.respuestas.disparadores.map((id) => `<li><b>${id}</b> ${esc(M.listaB[id].texto)}${D.respuestas.redisenoDeclaradoS3.includes(id) ? ' (rediseño declarado; verificar documentalmente)' : ''}</li>`).join('')}</ul>` : '<p>Ninguno.</p>';
     return `<header><h2>Reporte de clasificación de riesgo de IA</h2><p class="meta">${esc(c.nombre || 'Caso sin nombre')}${c.entidad ? ' · ' + esc(c.entidad) : ''} · ${esc(c.fecha)} · ${esc(D.metodologia.perfil)} · ${esc(D.metodologia.escala)} · metodología v${esc(D.metodologia.version)}</p></header>
-      <section><h3>Resultado</h3><table><tbody>${fila('Resultado', r.estado + (r.condicionado ? ' · ' + r.condicionado : ''))}${fila('Nivel inherente', r.nivelInherente)}${fila('Nivel residual', r.nivelResidual)}
+      <section><h3>Clasificación regulatoria preliminar (art. 22 del Reglamento)</h3><table><tbody>${fila('Categoría', cr.nombre)}${fila('Base legal', cr.baseLegal.join('; '))}${fila('Rediseño por verificar', cr.redisenoPorVerificar.join(', '))}${fila('Evaluación de impacto normativa', r.evaluacionImpactoNormativa)}
+      ${fila('Tipo de organización', D.ambito.sujeto)}${fila('Excepción del art. 4', D.ambito.excepcion)}${fila('Grupos que afecta especialmente (art. 12)', D.ambito.gruposVulnerables.join(', '))}</tbody></table></section>
+      <section><h3>Nivel interno de gestión (metodología de la herramienta)</h3><table><tbody>${fila('Resultado', r.estado + (r.condicionado ? ' · ' + r.condicionado : ''))}${fila('Nivel inherente', ni.inherente)}${fila('Nivel residual', ni.residual)}
       ${fila('Aprueba el caso', r.aprueba)}${fila('Aprobación de la reducción', r.aprobacionReduccion)}${fila('Tratamiento', trat)}${fila('Compuerta información-herramienta', r.compuerta)}${fila('Motivo', r.motivoNoViable)}${fila('Agencia', r.agencia)}
       ${fila('Observaciones', r.observaciones.join(' '))}${fila('Notas', r.notas.join(' '))}${fila('Respuestas pendientes', r.faltantes.length ? r.faltantes.join(', ') : '')}</tbody></table></section>
+      ${oblig}
       <section><h3>Caso de uso</h3><table><tbody>${fila('Área dueña', c.area)}${fila('Responsable', c.responsable)}${fila('Descripción', c.descripcion)}${fila('Herramienta o proveedor', c.herramienta)}</tbody></table></section>
       <section><h3>Filtros</h3><p>Paso 0: ${M.paso0.map((q) => `${q.id} ${E.p0[q.id] === 'si' ? 'Sí' : E.p0[q.id] === 'no' ? 'No' : '—'}`).join(' · ')}. Paso 1, usos indebidos: ${D.respuestas.usosIndebidos.length ? D.respuestas.usosIndebidos.join(', ') : 'ninguno'}.</p><p>Paso 2, disparadores de riesgo alto:</p>${listaB}
       <p>Paso 3: información ${esc(D.respuestas.informacion.inherente)}${D.respuestas.informacion.etiquetaInstitucional ? ' (en la entidad: ' + esc(D.respuestas.informacion.etiquetaInstitucional) + ')' : ''}${D.respuestas.informacion.conMedidas ? ' → ' + esc(D.respuestas.informacion.conMedidas) : ''}; herramienta ${esc(D.respuestas.herramienta.inherente)}${D.respuestas.herramienta.conMedidas ? ' → ' + esc(D.respuestas.herramienta.conMedidas) : ''}.</p></section>
@@ -263,15 +280,24 @@
   function reporteMarkdown() {
     const D = reporteDatos(), r = D.resultado, c = D.caso;
     const L = [`# Reporte de clasificación de riesgo de IA`, `${c.nombre || 'Caso sin nombre'}${c.entidad ? ' · ' + c.entidad : ''} · ${c.fecha} · ${D.metodologia.perfil} · ${D.metodologia.escala} · metodología v${D.metodologia.version}`, '',
-      `## Resultado`, `- Resultado: ${r.estado}${r.condicionado ? ' · ' + r.condicionado : ''}`, `- Nivel inherente: ${r.nivelInherente || '—'}`, `- Nivel residual: ${r.nivelResidual || '—'}`, `- Aprueba el caso: ${r.aprueba || '—'}`,
-      `- Aprobación de la reducción: ${r.aprobacionReduccion || '—'}`];
-    if (r.tratamiento) L.push(`- Tratamiento: EII ${r.tratamiento.eii.toLowerCase()} · validación: ${r.tratamiento.validacion} · monitoreo: ${r.tratamiento.monitoreo}`);
+      `## Clasificación regulatoria preliminar (art. 22 del Reglamento)`, `- Categoría: ${D.clasificacionRegulatoria.nombre}`, `- Base legal: ${D.clasificacionRegulatoria.baseLegal.join('; ') || '—'}`];
+    if (D.clasificacionRegulatoria.redisenoPorVerificar.length) L.push(`- Rediseño por verificar: ${D.clasificacionRegulatoria.redisenoPorVerificar.join(', ')}`);
+    if (r.evaluacionImpactoNormativa) L.push(`- Evaluación de impacto normativa: ${r.evaluacionImpactoNormativa}`);
+    L.push(`- Tipo de organización: ${D.ambito.sujeto || '—'}`, `- Excepción del art. 4: ${D.ambito.excepcion || '—'}`);
+    if (D.ambito.gruposVulnerables.length) L.push(`- Grupos que afecta especialmente (art. 12): ${D.ambito.gruposVulnerables.join(', ')}`);
+    L.push('', `## Nivel interno de gestión (metodología de la herramienta)`, `- Resultado: ${r.estado}${r.condicionado ? ' · ' + r.condicionado : ''}`, `- Nivel inherente: ${D.nivelInterno.inherente || '—'}`, `- Nivel residual: ${D.nivelInterno.residual || '—'}`, `- Aprueba el caso: ${r.aprueba || '—'}`,
+      `- Aprobación de la reducción: ${r.aprobacionReduccion || '—'}`);
+    if (r.tratamiento) L.push(`- Tratamiento: evaluación de impacto según la metodología: ${r.tratamiento.eii.toLowerCase()} · validación: ${r.tratamiento.validacion} · monitoreo: ${r.tratamiento.monitoreo}`);
     if (r.compuerta) L.push(`- Compuerta información-herramienta: ${r.compuerta}${r.motivoNoViable ? ' · ' + r.motivoNoViable : ''}`);
     if (r.agencia) L.push(`- Agencia: ${r.agencia}`);
     r.observaciones.forEach((o) => L.push(`- Observación: ${o}`)); r.notas.forEach((o) => L.push(`- Nota: ${o}`));
     if (r.faltantes.length) L.push(`- Respuestas pendientes: ${r.faltantes.join(', ')}`);
+    if (D.obligaciones.length) {
+      L.push('', '## Obligaciones aplicables y evidencia', '(Lista de verificación: la herramienta no verifica su cumplimiento; cada punto requiere evidencia.)');
+      D.obligaciones.forEach((o) => { L.push(`- **${o.art} · ${o.tema}** (${o.estado})`); o.items.forEach((i) => L.push(`  - [ ] ${i}`)); });
+    }
     L.push('', '## Caso de uso', `- Área dueña: ${c.area || '—'}`, `- Responsable: ${c.responsable || '—'}`, `- Descripción: ${c.descripcion || '—'}`, `- Herramienta o proveedor: ${c.herramienta || '—'}`, '',
-      '## Filtros', `- Usos indebidos: ${D.respuestas.usosIndebidos.join(', ') || 'ninguno'}`, `- Disparadores de riesgo alto: ${D.respuestas.disparadores.join(', ') || 'ninguno'}${D.respuestas.desactivadosS3.length ? ' (desactivados por S3: ' + D.respuestas.desactivadosS3.join(', ') + ')' : ''}`,
+      '## Filtros', `- Usos indebidos: ${D.respuestas.usosIndebidos.join(', ') || 'ninguno'}`, `- Disparadores de riesgo alto: ${D.respuestas.disparadores.join(', ') || 'ninguno'}${D.respuestas.redisenoDeclaradoS3.length ? ' (rediseño declarado por S3, por verificar: ' + D.respuestas.redisenoDeclaradoS3.join(', ') + ')' : ''}`,
       `- Información: ${D.respuestas.informacion.inherente}${D.respuestas.informacion.etiquetaInstitucional ? ' (en la entidad: ' + D.respuestas.informacion.etiquetaInstitucional + ')' : ''}${D.respuestas.informacion.conMedidas ? ' → ' + D.respuestas.informacion.conMedidas : ''}`, `- Herramienta: ${D.respuestas.herramienta.inherente}${D.respuestas.herramienta.conMedidas ? ' → ' + D.respuestas.herramienta.conMedidas : ''}`, '',
       '## Dimensiones', '| Dimensión | Inherente | Residual |', '|---|---|---|', ...Object.entries(M.dimensiones).map(([d, x]) => `| ${d} ${x.nombre} | ${r.dimensiones[d].inh ?? '—'} | ${r.dimensiones[d].res ?? '—'} |`),
       `| Piso de la Lista B | ${r.pisoListaB.inh} | ${r.pisoListaB.res} |`, `| Piso por agencia | ${r.pisoAgencia.inh ?? '—'} | ${r.pisoAgencia.res ?? '—'} |`, '',
@@ -319,20 +345,23 @@
     if (paso !== 'rep') {
       const n = R.faltantes.length;
       $('#resultado').innerHTML = `<div class="tarjeta"><span class="et">Resultado</span><p class="nota">El resultado se muestra al terminar, en el reporte. Así la evaluación describe el caso tal como es, sin ajustar respuestas según el nivel que va saliendo.</p>
-        <p class="nota"><b>${R.esIA || !R.p0Completo ? (n ? `Faltan ${n} respuestas.` : 'Todas las respuestas están completas.') : 'El caso no es un sistema de IA.'}</b></p>
+        <p class="nota"><b>${R.p0Completo && R.excepcion ? 'El caso está fuera del ámbito del Reglamento.' : R.esIA || !R.p0Completo ? (n ? `Faltan ${n} respuestas.` : 'Todas las respuestas están completas.') : 'El caso no es un sistema de IA.'}</b></p>
         ${n && R.p0Completo && R.esIA ? `<button type="button" class="enlace" data-act="ir" data-p="${primerPendiente()}">Ir al primer paso pendiente</button>` : ''}
         <button type="button" class="btn" data-act="ir" data-p="rep">${n && R.esIA ? 'Ver reporte parcial' : 'Ver resultado'}</button></div>`;
       return;
     }
     const nom = (n) => (n ? M.niveles[n].nombre : '—');
     const t = R.tratamiento;
-    $('#resultado').innerHTML = `<div class="tarjeta veredicto e-${R.estado}"><span class="et">Resultado</span><span class="nivel">${esc(R.titulo)}</span>
+    const rg = R.regulatoria;
+    $('#resultado').innerHTML = `<div class="tarjeta"><span class="et">Clasificación regulatoria preliminar</span><p class="reg"><b>${esc(rg.nombre)}</b>${rg.baseLegal.length ? `<br><span class="nota">${esc(rg.baseLegal.join('; '))}</span>` : ''}</p>
+      ${rg.redisenoPorVerificar.length ? `<p class="alerta-txt">Rediseño declarado en ${esc(rg.redisenoPorVerificar.join(', '))}: debe verificarse documentalmente.</p>` : ''}${R.eiiNormativa ? `<p class="nota">Evaluación de impacto normativa: ${esc(R.eiiNormativa)}</p>` : ''}</div>
+      <div class="tarjeta veredicto e-${R.estado}"><span class="et">Nivel interno de gestión</span><span class="nivel">${esc(R.titulo)}</span>
       ${R.condicionado ? '<span class="cond">Condicionado a reducir la autonomía del sistema</span>' : ''}${R.observaciones.length ? `<span class="alerta-txt">${R.observaciones.length} observación(es) por revisar</span>` : ''}
       ${R.completo ? `<div class="flujo">Inherente <b>${nom(R.nivelInh)}</b> → residual <b>${nom(R.nivelRes)}</b></div>` : ''}${R.completo && !['prohibido', 'fuera', 'noviable', 'experimental'].includes(R.estado) ? `<p class="nota"><b>${esc(t.ruta)}.</b> ${esc(t.siguiente)}</p>` : ''}</div>
       <div class="tarjeta"><div class="medidores">${Object.entries(M.dimensiones).map(([d, x]) => medidor(d, x.nombre, R.dim[d].inh, R.dim[d].res)).join('')}${medidor('AG', 'Piso por agencia', R.pisoAgInh, R.pisoAgRes)}${medidor('B', 'Piso de la Lista B', R.pisoBInh, R.pisoBRes)}</div>
       <p class="nota">Contorno: inherente. Relleno: residual.</p></div>
       <div class="tarjeta"><dl class="dl"><dt>Aprueba</dt><dd>${esc(R.aprueba || '—')}</dd>${R.completo && R.reduccion !== 'Sin reducción de nivel' ? `<dt>Aprueba la reducción</dt><dd>${esc(R.reduccion)}</dd>` : ''}
-      ${t && !['prohibido', 'fuera', 'experimental', 'noviable'].includes(R.estado) ? `<dt>EII</dt><dd>${esc(t.eii)}</dd><dt>Validación</dt><dd>${esc(t.validacion)}</dd><dt>Monitoreo</dt><dd>${esc(t.monitoreo)}</dd>` : ''}
+      ${t && !['prohibido', 'fuera', 'experimental', 'noviable'].includes(R.estado) ? `<dt>EII (metodología)</dt><dd>${esc(t.eii)}</dd><dt>Validación</dt><dd>${esc(t.validacion)}</dd><dt>Monitoreo</dt><dd>${esc(t.monitoreo)}</dd>` : ''}
       <dt>Compuerta</dt><dd class="${R.compuertaRes === 'No viable' ? 'alerta-txt' : ''}">${esc(R.compuertaRes || '—')}</dd>${R.agencia ? `<dt>Agencia</dt><dd class="${R.agencia !== 'Compatible' ? 'alerta-txt' : ''}">${esc(R.agencia)}</dd>` : ''}</dl>
       ${R.faltantes.length && R.esIA && !R.prohibido ? `<button type="button" class="enlace" data-act="ir" data-p="${primerPendiente()}">Faltan ${R.faltantes.length} respuestas. Ir al primer paso pendiente</button>` : ''}
       ${paso !== 'rep' ? '<button type="button" class="btn" data-act="ir" data-p="rep">Ver reporte</button>' : ''}</div>`;

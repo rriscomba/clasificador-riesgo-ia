@@ -4,17 +4,65 @@
  * Todo el contenido normativo está aquí para que pueda revisarse y adaptarse sin tocar la lógica (motor.js).
  */
 (function (root) {
-  const M = {
-    version: '1.4.0',
-    fecha: '2026-09-26',
-    aviso: 'Herramienta de apoyo a la autoevaluación. No es una herramienta oficial de la SGTD-PCM ni sustituye la clasificación que corresponde a cada entidad. Las listas A y B se basan en los artículos 23 y 24 del D.S. N.° 115-2025-PCM (El Peruano, 9 de setiembre de 2025); ante dudas, los artículos 23.3 y 24.2 permiten consultar a la SGTD.',
+  // Criterio interno configurable: el art. 17 del Reglamento no fija un plazo para los entornos experimentales.
+  const SANDBOX_DIAS_MAX = 90;
 
-    niveles: {
-      1: { nombre: 'Aceptable-bajo', clase: 'bajo' },
-      2: { nombre: 'Aceptable-moderado', clase: 'moderado' },
-      3: { nombre: 'Alto', clase: 'alto' },
-      4: { nombre: 'Alto (crítico)', clase: 'critico' }
+  const M = {
+    version: '1.5.0',
+    fecha: '2026-09-27',
+    aviso: 'Herramienta de apoyo a la autoevaluación. El resultado es una clasificación preliminar: no certifica el cumplimiento del Reglamento, no es una herramienta oficial de la SGTD-PCM ni constituye pronunciamiento o actuación de supervisión de la SGTD, y no sustituye la clasificación que corresponde a cada entidad. Las listas A y B se basan en los artículos 23 y 24 del D.S. N.° 115-2025-PCM (El Peruano, 9 de setiembre de 2025); ante dudas, los artículos 23.3 y 24.2 permiten consultar a la SGTD.',
+
+    // Clasificación jurídica del art. 22 del Reglamento. Se determina solo con A1–A6 (art. 23.1) y N1–N9 (art. 24.1);
+    // los criterios adicionales (AX, NX, SF), las medidas de reducción y el sandbox no la modifican.
+    regulatoria: {
+      USO_INDEBIDO: { nombre: 'Uso indebido (prohibido)', base: 'D.S. 115-2025-PCM, arts. 22.1 a) y 23.1' },
+      RIESGO_ALTO: { nombre: 'Riesgo alto', base: 'D.S. 115-2025-PCM, arts. 22.1 b) y 24.1' },
+      RIESGO_ACEPTABLE: { nombre: 'Riesgo aceptable', base: 'D.S. 115-2025-PCM, art. 22.2' },
+      FUERA_DE_AMBITO: { nombre: 'Fuera del ámbito del Reglamento', base: 'D.S. 115-2025-PCM, art. 4' },
+      NO_ES_IA: { nombre: 'No es un sistema de IA', base: 'Paso 0' },
+      PENDIENTE: { nombre: 'Pendiente: faltan respuestas de los pasos 0 a 2', base: '' }
     },
+
+    // Nivel interno de gestión: metodología propia de la herramienta, distinta de la categoría jurídica.
+    niveles: {
+      1: { nombre: 'Bajo', clase: 'bajo' },
+      2: { nombre: 'Moderado', clase: 'moderado' },
+      3: { nombre: 'Alto', clase: 'alto' },
+      4: { nombre: 'Crítico', clase: 'critico' }
+    },
+
+    // Ámbito jurídico (arts. 3 y 4 del Reglamento).
+    ambito: {
+      sujetos: [
+        { id: 'publica', nombre: 'Entidad de la Administración Pública', base: 'art. 3 a)' },
+        { id: 'empresa', nombre: 'Empresa del Estado (FONAFE o de gobiernos regionales o locales)', base: 'art. 3 b)' },
+        { id: 'privado', nombre: 'Sector privado, sociedad civil, academia o ciudadano', base: 'art. 3 c)' }
+      ],
+      excepciones: [
+        { id: 'ninguna', nombre: 'Ninguna' },
+        { id: 'personal', nombre: 'Uso para fines personales', base: 'art. 4 a)' },
+        { id: 'defensa', nombre: 'Defensa y seguridad nacional', base: 'art. 4 b)', nota: 'La excepción exige cumplir los principios del art. 7: protección de derechos fundamentales, no discriminación, seguridad, proporcionalidad y fiabilidad, supervisión y rendición de cuentas.' }
+      ]
+    },
+
+    // Art. 12: grupos cuyas necesidades diferenciadas deben atenderse. Se registra en el reporte; no cambia el nivel.
+    gruposVulnerables: [
+      { id: 'nna', nombre: 'Niñas, niños y adolescentes' },
+      { id: 'mayores', nombre: 'Personas adultas mayores' },
+      { id: 'discapacidad', nombre: 'Personas con discapacidad' },
+      { id: 'mujeres', nombre: 'Mujeres' },
+      { id: 'otros', nombre: 'Otras poblaciones en situación de vulnerabilidad' }
+    ],
+
+    // Obligaciones que el reporte lista como pendientes de evidencia. No modifican ningún puntaje.
+    // aplica: 'todos' o 'alto' (clasificación regulatoria de riesgo alto); sujetos: a quién aplica (art. 3).
+    obligaciones: [
+      { art: 'Art. 25', tema: 'Transparencia', aplica: 'alto', sujetos: ['publica', 'empresa', 'privado'], items: ['Se informa de forma previa, clara y sencilla la finalidad, las funcionalidades principales y el tipo de decisiones', 'Etiquetado visible de IA (salvo procesos administrativos internos sin impacto directo en derechos)', 'Explicación en lenguaje accesible de las decisiones automatizadas que afecten derechos'] },
+      { art: 'Art. 29', tema: 'Seguridad digital', aplica: 'todos', sujetos: ['publica', 'empresa'], items: ['Gestión de riesgos: cifrado, detección de anomalías y robustez del modelo', 'Privacidad desde el diseño: minimización y anonimización de datos personales', 'Auditorías de seguridad previas a la implementación y durante la operación', 'Gestión de incidentes dentro del sistema de gestión de seguridad de la información'] },
+      { art: 'Art. 30', tema: 'Evaluación de impacto', aplica: 'alto', sujetos: ['publica', 'empresa'], requerida: true, items: ['Evaluación de impacto antes del desarrollo o la implementación', 'Medidas de mitigación adoptadas y documentadas para revisión judicial o administrativa'] },
+      { art: 'Art. 31', tema: 'Obligaciones del sector privado', aplica: 'todos', sujetos: ['privado'], items: ['Registro actualizado y accesible del funcionamiento, fuentes de datos, lógica del algoritmo e impactos sociales y éticos esperados', 'Políticas de seguridad, privacidad, transparencia y rendición de cuentas', 'Formación interna sobre uso responsable de la IA', 'Supervisión humana en decisiones de riesgo alto (salud, educación, justicia, finanzas, servicios básicos)'] },
+      { art: 'Art. 32', tema: 'Evaluación de impacto (sector privado)', aplica: 'alto', sujetos: ['privado'], items: ['Evaluación de impacto previa (voluntaria) y medidas de mitigación documentadas', 'Conservación de la documentación por un mínimo de tres años'] }
+    ],
 
     tratamiento: {
       1: { ruta: 'Vía rápida', siguiente: 'Registre el caso en el inventario de IA y úselo con las reglas de uso aceptable.', aprueba: 'Registro en el inventario de IA (vía rápida)', eii: 'No requerida', validacion: 'Autoverificación del área dueña', monitoreo: 'Anual' },
@@ -33,7 +81,7 @@
           'Ley N.° 29733 y su Reglamento (D.S. N.° 016-2024-JUS)',
           'D.L. N.° 1412, Ley de Gobierno Digital, y D.S. N.° 029-2021-PCM',
           'D.U. N.° 007-2020, Marco de Confianza Digital',
-          'NTP-ISO/IEC 42001:2025'
+          'Estándares del art. 33 del Reglamento: NTP-ISO/IEC 27002:2022, ISO/IEC 38507:2022, NTP-ISO/IEC 42001:2025, ISO/IEC 23053:2022 y NTP-ISO/IEC 27005:2022'
         ],
         listaB: ['N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8', 'N9', 'NX1', 'NX2']
       },
@@ -166,9 +214,9 @@
     ],
 
     especiales: {
-      S1: { nombre: 'Entorno de experimentación (sandbox)', condiciones: ['Usa solo datos sintéticos, anonimizados o públicos', 'No produce efectos sobre personas, contrapartes ni decisiones', 'Se ejecuta en un entorno aislado de los sistemas productivos', 'Dura como máximo 90 días', 'Tiene responsable designado y emitirá un informe de resultados'] },
+      S1: { nombre: 'Entorno de experimentación (sandbox)', diasMax: SANDBOX_DIAS_MAX, condiciones: ['Usa solo datos sintéticos, anonimizados o públicos', 'No produce efectos sobre personas, contrapartes ni decisiones', 'Se ejecuta en un entorno aislado de los sistemas productivos', `Dura como máximo ${SANDBOX_DIAS_MAX} días (criterio interno configurable; el art. 17 del Reglamento no fija un plazo)`, 'Tiene responsable designado y emitirá un informe de resultados'] },
       S2: { nombre: 'Herencia de clasificación del catálogo', texto: '¿Usa una herramienta del catálogo dentro de las condiciones de uso ya evaluadas (tipo de información, agencia y finalidad)?' },
-      S3: { nombre: 'Rediseño de un caso de riesgo alto', texto: 'Se marca por disparador en el paso 2. Solo con rediseño real aprobado; se prohíbe fragmentar sistemas.' },
+      S3: { nombre: 'Rediseño de un caso de riesgo alto', texto: 'Se marca por disparador en el paso 2. Solo con un cambio real del caso de uso, aprobado y verificable documentalmente; las medidas de control no bastan y se prohíbe fragmentar sistemas.' },
       S4: { nombre: 'Excepción temporal', texto: '¿Se solicita operar con una brecha de control por un máximo de 6 meses, con controles compensatorios?' },
       S5: { nombre: 'Reducción por desempeño demostrado', texto: '¿Es un caso moderado con 12 meses de operación sin incidentes, desempeño estable y sin hallazgos de auditoría?' }
     },

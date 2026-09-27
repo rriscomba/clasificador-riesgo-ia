@@ -39,18 +39,25 @@
     const idsB = perfil.listaB;
     const si = (x) => x === 'si';
 
+    // Ámbito jurídico (arts. 3 y 4)
+    const amb = E.ambito || {};
+    R.sujeto = amb.sujeto || null;
+    R.excepcion = amb.excepcion && amb.excepcion !== 'ninguna' ? M.ambito.excepciones.find((x) => x.id === amb.excepcion) : null;
+    R.ambitoCompleto = !!amb.sujeto && !!amb.excepcion;
     // Paso 0
     const p0 = M.paso0.map((q) => E.p0[q.id]);
-    R.p0Completo = p0.every((x) => x === 'si' || x === 'no') || p0.some(si);
+    R.p0Completo = R.ambitoCompleto && (p0.every((x) => x === 'si' || x === 'no') || p0.some(si));
     R.esIA = p0.some(si);
-    // Paso 1
-    R.prohibido = M.listaA.some((q) => si(E.A[q.id]));
+    // Paso 1. A1–A6 son el art. 23.1; los AX son criterios adicionales de la metodología.
+    const esNorma = (id) => /^[AN]\d+$/.test(id);
     R.prohibidos = M.listaA.filter((q) => si(E.A[q.id])).map((q) => q.id);
-    // Paso 2
+    R.prohibido = R.prohibidos.length > 0;
+    R.prohibidosNorma = R.prohibidos.filter(esNorma);
+    // Paso 2. N1–N9 son el art. 24.1; NX y SF son criterios adicionales.
     R.disparadores = idsB.filter((id) => si(E.B[id] && E.B[id].aplica));
-    R.desactivados = R.disparadores.filter((id) => E.B[id].s3);
+    R.redisenados = R.disparadores.filter((id) => E.B[id].s3);
     R.pisoBInh = R.disparadores.length ? 3 : 1;
-    R.pisoBRes = R.disparadores.length > R.desactivados.length ? 3 : 1;
+    R.pisoBRes = R.disparadores.length > R.redisenados.length ? 3 : 1;
 
     // Paso 3
     const iInh = indice(M.informacion, E.info.inh);
@@ -94,6 +101,8 @@
     }
 
     // Faltantes de las listas y del paso 3
+    if (!amb.sujeto) R.faltantes.push('Ámbito: tipo de organización');
+    if (!amb.excepcion) R.faltantes.push('Ámbito: excepciones del art. 4');
     M.paso0.forEach((q) => { if (!E.p0[q.id] && !R.esIA) R.faltantes.push(q.id); });
     M.listaA.forEach((q) => { if (!E.A[q.id]) R.faltantes.push(q.id); });
     idsB.forEach((id) => { if (!(E.B[id] && E.B[id].aplica)) R.faltantes.push(id); });
@@ -135,19 +144,56 @@
       R.reduccion = R.nivelRes < R.nivelInh ? (R.nivelInh >= 3 && R.nivelRes < 3 ? 'Comité de Gobierno y Transformación Digital, con conformidad del área de riesgos' : 'Oficial de Inteligencia Artificial') : 'Sin reducción de nivel';
       R.tratamiento = M.tratamiento[R.nivelRes];
     }
-    if (R.desactivados.length) R.notas.push(`Uso(s) sensible(s) ${R.desactivados.join(', ')} descartado(s) por rediseño del caso; requiere aprobación del Comité.`);
+    if (R.redisenados.length) R.notas.push(`El responsable declara que el caso de uso se rediseñó y ya no corresponde a ${R.redisenados.join(', ')}. Debe verificarse documentalmente que el nuevo caso de uso ya no está comprendido en el supuesto; requiere aprobación del Comité.`);
     if (E.s4) R.notas.push('Excepción temporal por un máximo de 6 meses con controles compensatorios; requiere aprobación del Comité y no cambia el nivel.');
     if (E.s2) R.notas.push('Usa una herramienta ya aprobada dentro de sus condiciones: hereda su clasificación; registrar en el inventario.');
 
+    // Clasificación regulatoria (art. 22): solo depende del ámbito, de A1–A6 y de N1–N9.
+    // Las medidas de reducción, el sandbox y los criterios adicionales no la modifican.
+    const normaB = idsB.filter((id) => esNorma(id));
+    const listasCompletas = M.listaA.filter((q) => esNorma(q.id)).every((q) => E.A[q.id]) && normaB.every((id) => E.B[id] && E.B[id].aplica);
+    const baseDe = (id) => (M.listaA.find((q) => q.id === id) || M.listaB[id] || {}).base;
+    const vigentesN = R.disparadores.filter((id) => esNorma(id) && !R.redisenados.includes(id));
+    let cat, bases = [];
+    if (!R.p0Completo) cat = 'PENDIENTE';
+    else if (R.excepcion) { cat = 'FUERA_DE_AMBITO'; bases = [`D.S. 115-2025-PCM, ${R.excepcion.base}`]; }
+    else if (!R.esIA) cat = 'NO_ES_IA';
+    else if (R.prohibidosNorma.length) { cat = 'USO_INDEBIDO'; bases = R.prohibidosNorma.map(baseDe); }
+    else if (vigentesN.length) { cat = 'RIESGO_ALTO'; bases = vigentesN.map(baseDe); }
+    else if (!listasCompletas) cat = 'PENDIENTE';
+    else { cat = 'RIESGO_ACEPTABLE'; bases = [M.regulatoria.RIESGO_ACEPTABLE.base]; }
+    R.regulatoria = { categoria: cat, nombre: M.regulatoria[cat].nombre, baseLegal: bases.length ? bases : [M.regulatoria[cat].base].filter(Boolean), preliminar: true,
+      redisenoPorVerificar: R.redisenados.filter(esNorma) };
+    const regAlto = cat === 'RIESGO_ALTO';
+    if (R.excepcion && R.excepcion.nota) R.notas.push(R.excepcion.nota);
+    if (R.redisenados.some(esNorma)) R.notas.push('La clasificación regulatoria excluye los usos del art. 24.1 declarados como rediseñados solo de forma preliminar, hasta verificar el rediseño.');
+    if (['RIESGO_ALTO', 'RIESGO_ACEPTABLE'].includes(cat)) R.notas.push('Las medidas de reducción registradas bajan el riesgo residual, pero no modifican por sí mismas la clasificación regulatoria.');
+    if (cat === 'RIESGO_ACEPTABLE' && completo && R.nivelRes >= 3) R.notas.push('El nivel interno alto o crítico responde a la metodología de la herramienta (dimensiones, agencia o criterios adicionales); no equivale a la categoría jurídica de riesgo alto del art. 24.');
+    if (R.prohibido && !R.prohibidosNorma.length) R.notas.push(`${R.prohibidos.join(', ')}: criterio(s) adicional(es) de la metodología, no uso(s) indebido(s) del art. 23.1. La herramienta no admite el caso, pero esa decisión no es una clasificación jurídica.`);
+    if (R.sujeto === 'privado') R.notas.push('Sector privado: aplican los arts. 31 y 32. Las instancias de aprobación que propone la herramienta están pensadas para entidades públicas; adáptelas a su estructura de gobierno.');
+
+    // Obligaciones aplicables, siempre como pendientes de evidencia: la herramienta no verifica su cumplimiento.
+    R.obligaciones = ['RIESGO_ALTO', 'RIESGO_ACEPTABLE'].includes(cat) && R.sujeto
+      ? M.obligaciones.filter((o) => o.sujetos.includes(R.sujeto) && (o.aplica === 'todos' || regAlto))
+        .map((o) => ({ art: o.art, tema: o.tema, estado: o.requerida ? 'Requerida' : 'Pendiente de evidencia', items: o.items }))
+      : [];
+    if (completo && R.tratamiento) {
+      R.eiiNormativa = regAlto ? (R.sujeto === 'privado' ? 'Voluntaria (art. 32); conservar la documentación al menos tres años' : 'Requerida (art. 30)') : 'No exigida por el art. 30 (el caso no es de riesgo alto)';
+    }
+
     // Resultado final
     const s1 = E.s1 || {};
-    R.sandbox = !!s1.solicita && (s1.c || []).filter(Boolean).length === 5;
-    if (s1.solicita && !R.sandbox) R.notas.push('Se pidió la clasificación experimental, pero no se cumplen las 5 condiciones del entorno de prueba.');
+    const nCond = M.especiales.S1.condiciones.length;
+    R.sandbox = !!s1.solicita && (s1.c || []).filter(Boolean).length === nCond;
+    if (s1.solicita && !R.sandbox) R.notas.push(`Se pidió la clasificación experimental, pero no se cumplen las ${nCond} condiciones del entorno de prueba.`);
+    if (R.sandbox) R.notas.push('La clasificación experimental es un criterio interno de la metodología y no modifica la clasificación regulatoria.');
     let estado, titulo;
-    if (!R.p0Completo) { estado = 'incompleto'; titulo = 'Incompleto: responda el paso 0'; }
+    if (!R.p0Completo) { estado = 'incompleto'; titulo = 'Incompleto: responda el ámbito y el paso 0'; }
+    else if (R.excepcion) { estado = 'fuera'; titulo = `Fuera del ámbito del Reglamento: ${R.excepcion.nombre.toLowerCase()} (${R.excepcion.base})`; }
     else if (!R.esIA) { estado = 'fuera'; titulo = 'Fuera de alcance: no es un sistema de IA'; }
-    else if (R.prohibido) { estado = 'prohibido'; titulo = 'Uso indebido: prohibido'; }
-    else if (R.sandbox) { estado = 'experimental'; titulo = 'Experimental (sandbox, máximo 90 días)'; }
+    else if (R.prohibidosNorma.length) { estado = 'prohibido'; titulo = 'Uso indebido: prohibido'; }
+    else if (R.prohibido) { estado = 'prohibido'; titulo = 'No admitido por criterio adicional'; }
+    else if (R.sandbox) { estado = 'experimental'; titulo = 'Experimental (sandbox)'; }
     else if (!completo) { estado = 'incompleto'; titulo = `Incompleto: faltan ${R.faltantes.length} respuestas`; }
     else if (R.noViable) { estado = 'noviable'; titulo = 'No viable tal como está planteado'; }
     else { estado = M.niveles[R.nivelRes].clase; titulo = M.niveles[R.nivelRes].nombre; }
