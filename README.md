@@ -2,6 +2,8 @@
 
 Herramienta web abierta para que las entidades públicas del Perú autoevalúen el nivel de riesgo de sus sistemas y proyectos de inteligencia artificial, conforme a la Ley N.° 31814 y su Reglamento (D.S. N.° 115-2025-PCM).
 
+**🔗 Usar la herramienta en línea: <https://rriscomba.github.io/clasificador-riesgo-ia/>**
+
 La persona responsable responde un cuestionario guiado de siete pasos. La herramienta calcula el nivel de riesgo inherente y residual, indica quién debe aprobar el caso y qué controles corresponden, y genera un reporte exportable.
 
 > **Aviso.** Es una herramienta de apoyo a la autoevaluación. No es una herramienta oficial de la SGTD-PCM ni reemplaza la clasificación que corresponde a cada entidad. Las listas de usos indebidos (art. 23.1) y de riesgo alto (art. 24.1) se basan en el texto del Reglamento publicado en El Peruano el 9 de setiembre de 2025; los criterios adicionales se identifican con los códigos AX, NX y SF. Ante dudas, los artículos 23.3 y 24.2 permiten consultar a la SGTD.
@@ -19,7 +21,7 @@ Todo el código es legible y no tiene pasos de compilación, para que cualquier 
 
 **Publicación oficial:** el artículo 28.8 del Reglamento pide a las entidades públicas publicar el código fuente de sus sistemas de IA financiados con fondos públicos, con licencia libre o abierta, en la Plataforma Nacional de Software Público Peruano (PNSSP). Este repositorio puede registrarse allí y mantenerse en GitHub como espejo.
 
-**En línea:** publicar el repositorio con GitHub Pages (*Settings → Pages → Deploy from a branch → `main` / raíz*).
+**En línea:** <https://rriscomba.github.io/clasificador-riesgo-ia/> (GitHub Pages, rama `main` / raíz).
 
 **Local:** descargar el repositorio y abrir `index.html` en el navegador. No requiere instalación ni servidor.
 
