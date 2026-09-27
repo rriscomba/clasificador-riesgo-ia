@@ -4,6 +4,8 @@ Herramienta web abierta para que las entidades públicas del Perú autoevalúen 
 
 **🔗 Usar la herramienta en línea: <https://rriscomba.github.io/clasificador-riesgo-ia/>**
 
+![Recorrido por los pasos del Clasificador de Riesgo IA](docs/recorrido.gif)
+
 La persona responsable responde un cuestionario guiado de siete pasos. La herramienta calcula el nivel de riesgo inherente y residual, indica quién debe aprobar el caso y qué controles corresponden, y genera un reporte exportable.
 
 > **Aviso.** Es una herramienta de apoyo a la autoevaluación. No es una herramienta oficial de la SGTD-PCM ni reemplaza la clasificación que corresponde a cada entidad. Las listas de usos indebidos (art. 23.1) y de riesgo alto (art. 24.1) se basan en el texto del Reglamento publicado en El Peruano el 9 de setiembre de 2025; los criterios adicionales se identifican con los códigos AX, NX y SF. Ante dudas, los artículos 23.3 y 24.2 permiten consultar a la SGTD.
