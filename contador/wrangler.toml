@@ -1,0 +1,10 @@
+name = "contador-clasificador-ia"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "CONTADOR"
+id = "REEMPLAZAR_CON_EL_ID_DEL_NAMESPACE"
+
+[vars]
+ORIGEN_PERMITIDO = "https://USUARIO.github.io"

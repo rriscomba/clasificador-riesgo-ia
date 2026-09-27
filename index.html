@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--CONTENIDO-->
+<title>Clasificador de Riesgo IA</title>
+<meta name="description" content="Autoevaluación del nivel de riesgo de sistemas de inteligencia artificial para entidades públicas del Perú. No guarda datos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/estilos.css">
+<!--/CABECERA-->
+</head>
+<body>
+<div class="app">
+  <header class="barra">
+    <div class="marca">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28"><path d="M4 6h24M8 6v7M16 6v11M24 6v5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/><circle cx="8" cy="16" r="3" fill="currentColor"/><circle cx="16" cy="21" r="3" fill="currentColor"/><circle cx="24" cy="14" r="3" fill="currentColor"/></svg></span>
+      <div>
+        <h1>Clasificador de Riesgo IA</h1>
+        <p class="sub">Metodología abierta para entidades públicas del Perú · <span id="ver"></span></p>
+      </div>
+    </div>
+    <p class="privacidad"><span class="punto" aria-hidden="true"></span>Tus respuestas no se guardan ni se envían: todo ocurre en este navegador.</p>
+  </header>
+
+  <section class="controles" aria-label="Configuración">
+    <label data-ayuda="perfil">Perfil <select id="perfil"></select></label>
+    <label data-ayuda="escala">Escala de la entidad <select id="escala"></select></label>
+    <div class="acciones">
+      <button type="button" class="btn sec" data-act="ejemplo">Cargar ejemplo</button>
+      <button type="button" class="btn sec" data-act="nueva">Nueva evaluación</button>
+    </div>
+  </section>
+
+  <div id="aviso-ejemplo" class="aviso" hidden>Estás viendo un caso de ejemplo (agente de correo). Pulsa «Nueva evaluación» para empezar el tuyo.</div>
+
+  <div class="grilla">
+    <nav class="pasos" id="pasos" aria-label="Pasos"></nav>
+    <main id="principal" tabindex="-1"></main>
+    <aside id="resultado" aria-live="polite"></aside>
+  </div>
+
+  <footer class="pie">
+    <p id="aviso-legal"></p>
+    <p>Código abierto. Basado en la Ley N.° 31814 y su Reglamento, la ENIA 2026-2030 y marcos de referencia de Canadá, la Unión Europea, Australia e ISO/IEC 42005. Pase el cursor sobre cualquier opción para ver una ayuda.</p>
+  </footer>
+</div>
+<script src="js/config.js"></script>
+<script src="js/metodologia.js"></script>
+<script src="js/ayudas.js"></script>
+<script src="js/motor.js"></script>
+<script src="js/app.js"></script>
+<!--/CONTENIDO-->
+</body>
+</html>
